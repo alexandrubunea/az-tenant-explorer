@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-AzTenantExplorer.Worker-65f2f2bf-8c9e-4c1d-902d-f52361e0a8cf</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AzTenantExplorer.Core\AzTenantExplorer.Core.csproj" />
+    <ProjectReference Include="..\AzTenantExplorer.Infrastructure\AzTenantExplorer.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AzTenantExplorer.Core/AzTenantExplorer.Core.csproj" />
+    <Project Path="src/AzTenantExplorer.Infrastructure/AzTenantExplorer.Infrastructure.csproj" />
+    <Project Path="src/AzTenantExplorer.Worker/AzTenantExplorer.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AzTenantExplorer.Tests/AzTenantExplorer.Tests.csproj" />
+  </Folder>
+</Solution>
