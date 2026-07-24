@@ -1,0 +1,26 @@
+{
+    "value": [
+        {
+            "id": "/providers/Microsoft.Billing/billingAccounts/44444444-4444-4444-4444-444444444444/billingSubscriptions/11111111-1111-1111-1111-111111111111",
+            "name": "11111111-1111-1111-1111-111111111111",
+            "properties": {
+                "displayName": "My Playground Subscription",
+                "offerId": "MS-AZR-0063P",
+                "status": "Active",
+                "subscriptionId": "11111111-1111-1111-1111-111111111111"
+            },
+            "type": "Microsoft.Billing/billingAccounts/billingSubscriptions"
+        },
+        {
+            "id": "/providers/Microsoft.Billing/billingAccounts/44444444-4444-4444-4444-444444444444/billingSubscriptions/33333333-3333-3333-3333-333333333333",
+            "name": "33333333-3333-3333-3333-333333333333",
+            "properties": {
+                "displayName": "Pay-As-You-Go Dev/Test",
+                "offerId": "MS-AZR-0023P",
+                "status": "Active",
+                "subscriptionId": "33333333-3333-3333-3333-333333333333"
+            },
+            "type": "Microsoft.Billing/billingAccounts/billingSubscriptions"
+        }
+    ]
+}

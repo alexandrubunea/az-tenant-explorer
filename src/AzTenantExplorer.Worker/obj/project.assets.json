@@ -604,6 +604,29 @@
             "rid": "win"
           }
         }
+      },
+      "AzTenantExplorer.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "compile": {
+          "bin/placeholder/AzTenantExplorer.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/AzTenantExplorer.Core.dll": {}
+        }
+      },
+      "AzTenantExplorer.Infrastructure/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "AzTenantExplorer.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/AzTenantExplorer.Infrastructure.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/AzTenantExplorer.Infrastructure.dll": {}
+        }
       }
     }
   },
@@ -1510,10 +1533,22 @@
         "system.diagnostics.eventlog.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "AzTenantExplorer.Core/1.0.0": {
+      "type": "project",
+      "path": "../AzTenantExplorer.Core/AzTenantExplorer.Core.csproj",
+      "msbuildProject": "../AzTenantExplorer.Core/AzTenantExplorer.Core.csproj"
+    },
+    "AzTenantExplorer.Infrastructure/1.0.0": {
+      "type": "project",
+      "path": "../AzTenantExplorer.Infrastructure/AzTenantExplorer.Infrastructure.csproj",
+      "msbuildProject": "../AzTenantExplorer.Infrastructure/AzTenantExplorer.Infrastructure.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "AzTenantExplorer.Core >= 1.0.0",
+      "AzTenantExplorer.Infrastructure >= 1.0.0",
       "Microsoft.Extensions.Hosting >= 10.0.10"
     ]
   },
@@ -1542,7 +1577,14 @@
         "net10.0": {
           "framework": "net10.0",
           "targetAlias": "net10.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Core/AzTenantExplorer.Core.csproj": {
+              "projectPath": "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Core/AzTenantExplorer.Core.csproj"
+            },
+            "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Infrastructure/AzTenantExplorer.Infrastructure.csproj": {
+              "projectPath": "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Infrastructure/AzTenantExplorer.Infrastructure.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

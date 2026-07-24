@@ -1,11 +1,30 @@
 {
   "version": 4,
   "targets": {
-    "net10.0": {}
+    "net10.0": {
+      "AzTenantExplorer.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "compile": {
+          "bin/placeholder/AzTenantExplorer.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/AzTenantExplorer.Core.dll": {}
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "AzTenantExplorer.Core/1.0.0": {
+      "type": "project",
+      "path": "../AzTenantExplorer.Core/AzTenantExplorer.Core.csproj",
+      "msbuildProject": "../AzTenantExplorer.Core/AzTenantExplorer.Core.csproj"
+    }
+  },
   "projectFileDependencyGroups": {
-    "net10.0": []
+    "net10.0": [
+      "AzTenantExplorer.Core >= 1.0.0"
+    ]
   },
   "packageFolders": {
     "/Users/alexandrubunea/.nuget/packages/": {}
@@ -32,7 +51,11 @@
         "net10.0": {
           "framework": "net10.0",
           "targetAlias": "net10.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Core/AzTenantExplorer.Core.csproj": {
+              "projectPath": "/Users/alexandrubunea/Projects/az-tenant-explorer/src/AzTenantExplorer.Core/AzTenantExplorer.Core.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
