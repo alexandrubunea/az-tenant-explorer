@@ -19,7 +19,7 @@ public record Subscription
 
     string? BillingAccountId,
     string? BillingProfileId,
-    string? InvoiceSectionId
+    string? InvoiceSectionName
 )
 {
     public BillingPlatform GetBillingPlatform =>

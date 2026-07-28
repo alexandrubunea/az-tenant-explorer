@@ -6,5 +6,5 @@ public record InvoiceSection(
   string Name,
   string DisplayName,
   string State,
-  string BillingProfileId
+  string BillingProfileName
 );

@@ -7,7 +7,7 @@ public record BillingProfile(
     string DisplayName,
     string Currency,
     string Status,
-    string BillingAccountId,
+    string BillingAccountName,
 
     string? PoNumber
 );

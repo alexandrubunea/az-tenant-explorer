@@ -21,43 +21,44 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
         ), cancellationToken);
     }
 
-    public Task<IEnumerable<BillingProfile>> GetBillingProfilesAsync(string billingAccountId, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<BillingProfile>> GetBillingProfilesAsync(string billingAccountName, CancellationToken cancellationToken = default)
     {
-        string route = $"providers/Microsoft.Billing/billingAccounts/{billingAccountId}/billingProfiles?api-version=2024-04-01";
+        string route = $"providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles?api-version=2024-04-01";
 
         return GetAndMapCollectionAsync<BillingDto, BillingProfile>(route, dto => new BillingProfile(
             dto.Id,
-            dto.Properities.SystemId,
+            dto.Properties.SystemId,
             dto.Name,
-            dto.Properities.DisplayName,
-            dto.Properities.Currency,
-            dto.Properities.Status,
-            billingAccountId,
-            dto?.Properities.PoNumber
+            dto.Properties.DisplayName,
+            dto.Properties.Currency,
+            dto.Properties.Status,
+            billingAccountName,
+            dto?.Properties.PoNumber
         ), cancellationToken);
     }
 
     public Task<IEnumerable<InvoiceSection>> GetInvoiceSectionsAsync(
-        string billingAccountId,
-        string billingProfileId,
+        string billingAccountName,
+        string billingProfileName,
         CancellationToken cancellationToken = default)
     {
-        string route = $"https://management.azure.com/providers/Microsoft.Billing/billingAccounts/{billingAccountId}/billingProfiles/{billingProfileId}/invoiceSections?api-version=2024-04-01";
+        string route = $"https://management.azure.com/providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections?api-version=2024-04-01";
 
         return GetAndMapCollectionAsync<InvoiceDto, InvoiceSection>(route, dto => new InvoiceSection(
             dto.Id,
-            dto.Properities.SystemId,
+            dto.Properties.SystemId,
             dto.Name,
-            dto.Properities.DisplayName,
-            dto.Properities.State,
-            billingProfileId
+            dto.Properties.DisplayName,
+            dto.Properties.State,
+            billingProfileName
         ), cancellationToken);
     }
 
-    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string billingAccount, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string billingAccountName, CancellationToken cancellationToken = default)
     {
+
         string armRoute = "subscriptions?api-version=2025-04-01";
-        string billingRoute = $"/providers/Microsoft.Billing/billingAccounts/{billingAccount}/billingSubscriptions?api-version=2024-04-01";
+        string billingRoute = $"/providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions?api-version=2024-04-01";
 
         var armTask = GetAndMapCollectionAsync<ArmSubscriptionDto, ArmSubscriptionDto>(
             armRoute, dto => dto, cancellationToken);
@@ -75,40 +76,42 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
             b => b,
             StringComparer.OrdinalIgnoreCase);
 
-        var mappedSubscriptions = armData.Select(arm =>
-        {
-            billingDict.TryGetValue(arm.SubscriptionId, out var bill);
-
-            var quota = arm.SubscriptionPolicies?.QuotaId ?? string.Empty;
-            var offerId = bill?.Properties.OfferId;
-
-            // If Commerce API provided an OfferId (MOSP), use it. Otherwise apply Quota Hack (MCA).
-            if (string.IsNullOrWhiteSpace(offerId))
+        var mappedSubscriptions = armData
+            .Where(arm => billingDict.ContainsKey(arm.SubscriptionId))
+            .Select(arm =>
             {
-                if (quota.Contains("DevTest", StringComparison.OrdinalIgnoreCase) ||
-                    quota.Contains("MSDN", StringComparison.OrdinalIgnoreCase))
-                {
-                    offerId = "MS-AZR-0148G"; // MCA Dev/Test
-                }
-                else
-                {
-                    offerId = "MS-AZR-0017G"; // MCA Standard
-                }
-            }
+                var bill = billingDict[arm.SubscriptionId];
 
-            return new Subscription(
-                arm.Id,
-                arm.SubscriptionId,
-                arm.DisplayName,
-                arm.State,
-                offerId,
-                arm.TenantId,
-                arm.SubscriptionPolicies?.SpendingLimit ?? "Unknown",
-                bill?.Properties.BillingAccountId,
-                bill?.Properties.BillingProfileId,
-                bill?.Properties.InvoiceSectionId
-            );
-        });
+                var quota = arm.SubscriptionPolicies?.QuotaId ?? string.Empty;
+                var offerId = bill.Properties.OfferId;
+
+                // If Commerce API provided an OfferId (MOSP), use it. Otherwise apply Quota Hack (MCA).
+                if (string.IsNullOrWhiteSpace(offerId))
+                {
+                    if (quota.Contains("DevTest", StringComparison.OrdinalIgnoreCase) ||
+                        quota.Contains("MSDN", StringComparison.OrdinalIgnoreCase))
+                    {
+                        offerId = "MS-AZR-0148G"; // MCA Dev/Test
+                    }
+                    else
+                    {
+                        offerId = "MS-AZR-0017G"; // MCA Standard
+                    }
+                }
+
+                return new Subscription(
+                    arm.Id,
+                    arm.SubscriptionId,
+                    arm.DisplayName,
+                    arm.State,
+                    offerId,
+                    arm.TenantId,
+                    arm.SubscriptionPolicies?.SpendingLimit ?? "Unknown",
+                    billingAccountName,
+                    bill.Properties.BillingProfileName,
+                    bill.Properties.InvoiceSectionName
+                );
+            });
 
         return mappedSubscriptions;
     }
@@ -143,10 +146,10 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
     private record AccountDto(string Id, string Name, AccountProps Properties);
     private record AccountProps(string DisplayName, string AccountStatus, string AgreementType);
 
-    private record BillingDto(string Id, string Name, BillingProps Properities);
+    private record BillingDto(string Id, string Name, BillingProps Properties);
     private record BillingProps(string SystemId, string DisplayName, string Currency, string Status, string? PoNumber);
 
-    private record InvoiceDto(string Id, string Name, InvoiceProps Properities);
+    private record InvoiceDto(string Id, string Name, InvoiceProps Properties);
     private record InvoiceProps(string DisplayName, string State, string SystemId);
 
     private record ArmSubscriptionDto(
@@ -161,7 +164,6 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
     private record BillingSubProps(
         string SubscriptionId,
         string? OfferId,
-        string BillingAccountId,
-        string BillingProfileId,
-        string InvoiceSectionId);
+        string BillingProfileName,
+        string InvoiceSectionName);
 }
