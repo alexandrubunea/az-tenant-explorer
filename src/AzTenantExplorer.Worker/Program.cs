@@ -3,6 +3,7 @@ using Azure.Core;
 
 using AzTenantExplorer.Core.Interfaces;
 using AzTenantExplorer.Infrastructure.Clients;
+using AzTenantExplorer.Worker;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,5 +18,10 @@ builder.Services.AddHttpClient<IAzureTenantClient, AzureTenantClient>()
         client.BaseAddress = new Uri("https://management.azure.com/");
     });
 
+builder.Services.AddTransient<ConnectionTestWorker>();
+
 var host = builder.Build();
-host.Run();
+
+// One-shot CLI test
+var worker = host.Services.GetRequiredService<ConnectionTestWorker>();
+await worker.RunAsync();
