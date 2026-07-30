@@ -54,11 +54,12 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
         ), cancellationToken);
     }
 
-    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string billingAccountName, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Subscription>> GetMCASubscriptionsAsync(
+        string billingAccountName,
+        CancellationToken cancellationToken = default)
     {
-
-        string armRoute = "subscriptions?api-version=2025-04-01";
-        string billingRoute = $"/providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions?api-version=2024-04-01";
+        string armRoute = "subscriptions?api-version=2022-12-01";
+        string billingRoute = $"providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions?api-version=2024-04-01";
 
         var armTask = GetAndMapCollectionAsync<ArmSubscriptionDto, ArmSubscriptionDto>(
             armRoute, dto => dto, cancellationToken);
@@ -76,28 +77,13 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
             b => b,
             StringComparer.OrdinalIgnoreCase);
 
-        var mappedSubscriptions = armData
+        // Filter ARM subscriptions to only those present in this MCA Billing Account
+        return armData
             .Where(arm => billingDict.ContainsKey(arm.SubscriptionId))
             .Select(arm =>
             {
                 var bill = billingDict[arm.SubscriptionId];
-
-                var quota = arm.SubscriptionPolicies?.QuotaId ?? string.Empty;
-                var offerId = bill.Properties.OfferId;
-
-                // If Commerce API provided an OfferId (MOSP), use it. Otherwise apply Quota Hack (MCA).
-                if (string.IsNullOrWhiteSpace(offerId))
-                {
-                    if (quota.Contains("DevTest", StringComparison.OrdinalIgnoreCase) ||
-                        quota.Contains("MSDN", StringComparison.OrdinalIgnoreCase))
-                    {
-                        offerId = "MS-AZR-0148G"; // MCA Dev/Test
-                    }
-                    else
-                    {
-                        offerId = "MS-AZR-0017G"; // MCA Standard
-                    }
-                }
+                var offerId = ResolveMcaOfferId(arm.SubscriptionPolicies?.QuotaId);
 
                 return new Subscription(
                     arm.Id,
@@ -112,8 +98,33 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
                     bill.Properties.InvoiceSectionName
                 );
             });
+    }
 
-        return mappedSubscriptions;
+    public async Task<IEnumerable<Subscription>> GetMOSPSubscriptionsAsync(
+        IEnumerable<string> knownMcaSubscriptionIds,
+        CancellationToken cancellationToken = default)
+    {
+        string route = "subscriptions?api-version=2022-12-01";
+
+        var mcaSet = new HashSet<string>(knownMcaSubscriptionIds, StringComparer.OrdinalIgnoreCase);
+        var armData = await GetAndMapCollectionAsync<ArmSubscriptionDto, ArmSubscriptionDto>(
+            route, dto => dto, cancellationToken);
+
+        // Ignore subscriptions already mapped under an MCA Billing Account
+        return armData
+            .Where(arm => !mcaSet.Contains(arm.SubscriptionId))
+            .Select(arm => new Subscription(
+                arm.Id,
+                arm.SubscriptionId,
+                arm.DisplayName,
+                arm.State,
+                ResolveMospOfferId(arm.SubscriptionPolicies?.QuotaId), // Translator logic applied here
+                arm.TenantId,
+                arm.SubscriptionPolicies?.SpendingLimit ?? "Unknown",
+                null, // No Billing Account available via SPN
+                null, // No Billing Profile
+                null  // No Invoice Section
+            ));
     }
 
     /* --- Private Methods --- */
@@ -125,6 +136,44 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
         var token = await credential.GetTokenAsync(requestContext, cancellationToken);
 
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+    }
+
+    // --- Helper functions
+    private static string ResolveMcaOfferId(string? quotaId)
+    {
+        var quota = quotaId ?? string.Empty;
+
+        // I have not seen a MS-AZR-0148G in a while... I'm not sure if it's worth checking at this moment.
+        if (quota.Contains("DevTest", StringComparison.OrdinalIgnoreCase) ||
+            quota.Contains("MSDN", StringComparison.OrdinalIgnoreCase))
+        {
+            return "MS-AZR-0148G";
+        }
+
+        return "MS-AZR-0017G";
+    }
+
+    private static string ResolveMospOfferId(string? quotaId)
+    {
+        if (string.IsNullOrWhiteSpace(quotaId))
+        {
+            return "Unknown-MOSP-Offer";
+        }
+
+        // Extract the base string before the underscore (e.g., "PayAsYouGo_2014-09-01" -> "PayAsYouGo")
+        var normalizedQuota = quotaId.Split('_')[0];
+
+        // Note: this may be wrong, and also it may need completion. I don't have all the offers for testing.
+        return normalizedQuota.ToLowerInvariant() switch
+        {
+            "payasyougo"       => "MS-AZR-0003P", // Standard Pay-As-You-Go
+            "msdndevtest"      => "MS-AZR-0023P", // Pay-As-You-Go Dev/Test
+            "msdn"             => "MS-AZR-0059P", // Visual Studio Professional / Enterprise (MSDN)
+            "freetrial"        => "MS-AZR-0044P", // Azure Free Trial
+            "azureforstudents" => "MS-AZR-0144P", // Azure for Students Starter
+            "sponsored"        => "MS-AZR-0036P", // Azure Sponsorship
+            _                  => "Unknown-MOSP-Offer"
+        };
     }
 
     // --- Map JSON response from Azure API
@@ -143,15 +192,19 @@ public class AzureTenantClient(HttpClient httpClient, TokenCredential credential
     // --- DTO Records
     private record AzureListResponse<T>(List<T> Value);
 
+    // --- Billing Account DTO
     private record AccountDto(string Id, string Name, AccountProps Properties);
     private record AccountProps(string DisplayName, string AccountStatus, string AgreementType);
 
+    // --- Billing Profile DTO
     private record BillingDto(string Id, string Name, BillingProps Properties);
     private record BillingProps(string SystemId, string DisplayName, string Currency, string Status, string? PoNumber);
 
+    // --- Invoice Section DTO
     private record InvoiceDto(string Id, string Name, InvoiceProps Properties);
     private record InvoiceProps(string DisplayName, string State, string SystemId);
 
+    // --- Subscription DTO
     private record ArmSubscriptionDto(
         string Id,
         string SubscriptionId,
